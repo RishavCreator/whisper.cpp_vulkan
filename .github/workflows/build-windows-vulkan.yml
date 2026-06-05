@@ -16,39 +16,25 @@ jobs:
       - name: Install Vulkan SDK
         shell: powershell
         run: |
-          $version = "1.3.280.0"
-          $installer = "VulkanSDK-$version-Installer.exe"
-          $url = "https://sdk.lunarg.com/sdk/download/$version/windows/$installer"
-          
-          Write-Host "Downloading Vulkan SDK $version..."
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          
-          Write-Host "Installing silently..."
-          Start-Process -FilePath ".\$installer" -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait -NoNewWindow
-          
-          # Verify installation
-          $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
-          if (-not $sdk) { throw "Vulkan SDK not found after install" }
-          Write-Host "Installed to: $($sdk.FullName)"
+          Write-Host "Fetching latest Vulkan SDK..."
+          $url = "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan_sdk.exe"
+          Invoke-WebRequest -Uri $url -OutFile vulkan_sdk.exe
+          Write-Host "Installing..."
+          Start-Process -FilePath ".\vulkan_sdk.exe" `
+            -ArgumentList "--accept-licenses --default-answer --confirm-command install" `
+            -Wait -NoNewWindow
 
       - name: Set Vulkan environment
         shell: powershell
         run: |
           $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
           if (-not $sdk) { throw "Vulkan SDK folder not found" }
-
           $sdkPath = $sdk.FullName
-
-          # Set env vars for subsequent steps
-          echo "VULKAN_SDK=$sdkPath"                          | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "Vulkan_INCLUDE_DIR=$sdkPath\Include"          | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "Vulkan_LIBRARY=$sdkPath\Lib\vulkan-1.lib"    | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "VULKAN_SDK=$sdkPath"                             | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "Vulkan_INCLUDE_DIR=$sdkPath\Include"             | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "Vulkan_LIBRARY=$sdkPath\Lib\vulkan-1.lib"       | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "Vulkan_GLSLC_EXECUTABLE=$sdkPath\Bin\glslc.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-          # Add Bin to PATH so glslc is callable during build
-          echo "$sdkPath\Bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-
-          # Sanity checks
+          echo "$sdkPath\Bin"                                    | Out-File -FilePath $env:GITHUB_PATH -Append
           Write-Host "SDK path: $sdkPath"
           if (-not (Test-Path "$sdkPath\Include\vulkan\vulkan.h")) { throw "vulkan.h not found" }
           if (-not (Test-Path "$sdkPath\Lib\vulkan-1.lib"))        { throw "vulkan-1.lib not found" }
