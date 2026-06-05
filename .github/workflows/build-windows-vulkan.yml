@@ -2,84 +2,84 @@ name: Vulkan
 
 on:
   workflow_dispatch:
-  push:
+    push:
 
-jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+    jobs:
+      build:
+          runs-on: windows-latest
+              steps:
+                    - name: Checkout
+                            uses: actions/checkout@v4
+                                    with:
+                                              submodules: recursive
 
-      - name: Install Vulkan SDK
-        shell: powershell
-        run: |
-          $version = "1.3.280.0"
-          $installer = "VulkanSDK-$version-Installer.exe"
-          $url = "https://sdk.lunarg.com/sdk/download/$version/windows/$installer"
-          
-          Write-Host "Downloading Vulkan SDK $version..."
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          
-          Write-Host "Installing silently..."
-          Start-Process -FilePath ".\$installer" -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait -NoNewWindow
-          
-          # Verify installation
-          $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
-          if (-not $sdk) { throw "Vulkan SDK not found after install" }
-          Write-Host "Installed to: $($sdk.FullName)"
+                                                    - name: Install Vulkan SDK
+                                                            shell: powershell
+                                                                    run: |
+                                                                              $version = "1.3.280.0"
+                                                                                        $installer = "VulkanSDK-$version-Installer.exe"
+                                                                                                  $url = "https://sdk.lunarg.com/sdk/download/$version/windows/$installer"
+                                                                                                            
+                                                                                                                      Write-Host "Downloading Vulkan SDK $version..."
+                                                                                                                                Invoke-WebRequest -Uri $url -OutFile $installer
+                                                                                                                                          
+                                                                                                                                                    Write-Host "Installing silently..."
+                                                                                                                                                              Start-Process -FilePath ".\$installer" -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait -NoNewWindow
+                                                                                                                                                                        
+                                                                                                                                                                                  # Verify installation
+                                                                                                                                                                                            $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+                                                                                                                                                                                                      if (-not $sdk) { throw "Vulkan SDK not found after install" }
+                                                                                                                                                                                                                Write-Host "Installed to: $($sdk.FullName)"
 
-      - name: Set Vulkan environment
-        shell: powershell
-        run: |
-          $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
-          if (-not $sdk) { throw "Vulkan SDK folder not found" }
+                                                                                                                                                                                                                      - name: Set Vulkan environment
+                                                                                                                                                                                                                              shell: powershell
+                                                                                                                                                                                                                                      run: |
+                                                                                                                                                                                                                                                $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+                                                                                                                                                                                                                                                          if (-not $sdk) { throw "Vulkan SDK folder not found" }
 
-          $sdkPath = $sdk.FullName
+                                                                                                                                                                                                                                                                    $sdkPath = $sdk.FullName
 
-          # Set env vars for subsequent steps
-          echo "VULKAN_SDK=$sdkPath"                          | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "Vulkan_INCLUDE_DIR=$sdkPath\Include"          | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "Vulkan_LIBRARY=$sdkPath\Lib\vulkan-1.lib"    | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "Vulkan_GLSLC_EXECUTABLE=$sdkPath\Bin\glslc.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+                                                                                                                                                                                                                                                                              # Set env vars for subsequent steps
+                                                                                                                                                                                                                                                                                        echo "VULKAN_SDK=$sdkPath"                          | Out-File -FilePath $env:GITHUB_ENV -Append
+                                                                                                                                                                                                                                                                                                  echo "Vulkan_INCLUDE_DIR=$sdkPath\Include"          | Out-File -FilePath $env:GITHUB_ENV -Append
+                                                                                                                                                                                                                                                                                                            echo "Vulkan_LIBRARY=$sdkPath\Lib\vulkan-1.lib"    | Out-File -FilePath $env:GITHUB_ENV -Append
+                                                                                                                                                                                                                                                                                                                      echo "Vulkan_GLSLC_EXECUTABLE=$sdkPath\Bin\glslc.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-          # Add Bin to PATH so glslc is callable during build
-          echo "$sdkPath\Bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+                                                                                                                                                                                                                                                                                                                                # Add Bin to PATH so glslc is callable during build
+                                                                                                                                                                                                                                                                                                                                          echo "$sdkPath\Bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
-          # Sanity checks
-          Write-Host "SDK path: $sdkPath"
-          if (-not (Test-Path "$sdkPath\Include\vulkan\vulkan.h")) { throw "vulkan.h not found" }
-          if (-not (Test-Path "$sdkPath\Lib\vulkan-1.lib"))        { throw "vulkan-1.lib not found" }
-          if (-not (Test-Path "$sdkPath\Bin\glslc.exe"))           { throw "glslc.exe not found" }
-          Write-Host "All Vulkan SDK components verified."
+                                                                                                                                                                                                                                                                                                                                                    # Sanity checks
+                                                                                                                                                                                                                                                                                                                                                              Write-Host "SDK path: $sdkPath"
+                                                                                                                                                                                                                                                                                                                                                                        if (-not (Test-Path "$sdkPath\Include\vulkan\vulkan.h")) { throw "vulkan.h not found" }
+                                                                                                                                                                                                                                                                                                                                                                                  if (-not (Test-Path "$sdkPath\Lib\vulkan-1.lib"))        { throw "vulkan-1.lib not found" }
+                                                                                                                                                                                                                                                                                                                                                                                            if (-not (Test-Path "$sdkPath\Bin\glslc.exe"))           { throw "glslc.exe not found" }
+                                                                                                                                                                                                                                                                                                                                                                                                      Write-Host "All Vulkan SDK components verified."
 
-      - name: Configure
-        shell: powershell
-        run: |
-          cmake -B build `
-            -DGGML_VULKAN=1 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DVulkan_INCLUDE_DIR="$env:Vulkan_INCLUDE_DIR" `
-            -DVulkan_LIBRARY="$env:Vulkan_LIBRARY" `
-            -DVulkan_GLSLC_EXECUTABLE="$env:Vulkan_GLSLC_EXECUTABLE"
+                                                                                                                                                                                                                                                                                                                                                                                                            - name: Configure
+                                                                                                                                                                                                                                                                                                                                                                                                                    shell: powershell
+                                                                                                                                                                                                                                                                                                                                                                                                                            run: |
+                                                                                                                                                                                                                                                                                                                                                                                                                                      cmake -B build `
+                                                                                                                                                                                                                                                                                                                                                                                                                                                  -DGGML_VULKAN=1 `
+                                                                                                                                                                                                                                                                                                                                                                                                                                                              -DCMAKE_BUILD_TYPE=Release `
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          -DVulkan_INCLUDE_DIR="$env:Vulkan_INCLUDE_DIR" `
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      -DVulkan_LIBRARY="$env:Vulkan_LIBRARY" `
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  -DVulkan_GLSLC_EXECUTABLE="$env:Vulkan_GLSLC_EXECUTABLE"
 
-      - name: Build
-        shell: powershell
-        run: cmake --build build --config Release -j 4
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - name: Build
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                shell: powershell
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        run: cmake --build build --config Release -j 4
 
-      - name: Package
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path package
-          Get-ChildItem -Path build -Recurse -Include *.exe,*.dll | Copy-Item -Destination package -Force
-          Copy-Item LICENSE package\LICENSE.txt -Force
-          Write-Host "Package contents:"
-          Get-ChildItem package
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              - name: Package
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      shell: powershell
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              run: |
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        New-Item -ItemType Directory -Force -Path package
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Get-ChildItem -Path build -Recurse -Include *.exe,*.dll | Copy-Item -Destination package -Force
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Copy-Item LICENSE package\LICENSE.txt -Force
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Write-Host "Package contents:"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Get-ChildItem package
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: whisper-cpp-windows-vulkan
-          path: package
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      - name: Upload
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              uses: actions/upload-artifact@v4
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      with:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                name: whisper-cpp-windows-vulkan
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          path: package
