@@ -15,11 +15,37 @@ jobs:
 
       - name: Install Vulkan SDK
         shell: powershell
-        run: choco install vulkan-sdk -y
+        run: |
+          choco install vulkan-sdk -y
+          dir "C:\VulkanSDK" -ErrorAction SilentlyContinue
+
+      - name: Locate Vulkan SDK
+        shell: powershell
+        run: |
+          $sdk = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $sdk) {
+            throw "Vulkan SDK folder not found in C:\VulkanSDK"
+          }
+
+          echo "VULKAN_SDK=$($sdk.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "Vulkan_INCLUDE_DIR=$($sdk.FullName)\Include" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "Vulkan_LIBRARY=$($sdk.FullName)\Lib\vulkan-1.lib" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "Vulkan_GLSLC_EXECUTABLE=$($sdk.FullName)\Bin\glslc.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          Write-Host "Using Vulkan SDK: $($sdk.FullName)"
+          Test-Path "$($sdk.FullName)\Include\vulkan\vulkan.h"
+          Test-Path "$($sdk.FullName)\Lib\vulkan-1.lib"
+          Test-Path "$($sdk.FullName)\Bin\glslc.exe"
 
       - name: Configure
         shell: powershell
-        run: cmake -B build -DGGML_VULKAN=1 -DCMAKE_BUILD_TYPE=Release
+        run: |
+          cmake -B build `
+            -DGGML_VULKAN=1 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DVulkan_INCLUDE_DIR="$env:Vulkan_INCLUDE_DIR" `
+            -DVulkan_LIBRARY="$env:Vulkan_LIBRARY" `
+            -DVulkan_GLSLC_EXECUTABLE="$env:Vulkan_GLSLC_EXECUTABLE"
 
       - name: Build
         shell: powershell
